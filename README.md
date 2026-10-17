@@ -32,7 +32,7 @@
 
 ## The problem
 
-A hospital needs blood now. Its own fridge is short, so the blood bank officer starts phoning around:
+Sometimes hospital needs blood now but they don't have stock of that specific Blood Group needed. Its own fridge is short, so the blood bank officer starts phoning around:
 one bank doesn't answer, another already promised its units to someone else, a third has the blood
 but the bag expires before the van can get there.
 
