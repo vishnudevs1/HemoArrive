@@ -10,6 +10,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?logo=leaflet&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-37%20passing-brightgreen)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -25,6 +26,7 @@
 - [Documentation](#documentation)
 - [Roadmap](#roadmap)
 - [Disclaimer](#disclaimer)
+- [License](#license)
 
 ---
 
@@ -198,6 +200,10 @@ Not in this build yet. These are the next steps toward the full architecture:
 HemoArrive is a **prototype**. All hospitals, drivers, stock and history in the app are **fictional
 and simulated**. It is not a medical device and must not be used for real clinical or transfusion
 decisions.
+
+## License
+
+Released under the [MIT License](LICENSE). © 2026 Vishnu Kumar
 
 ---
 
