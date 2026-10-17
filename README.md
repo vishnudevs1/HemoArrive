@@ -1,210 +1,239 @@
-# HemoArrive 🩸
+# HemoArrive
 
-> **Blood that can actually reach the patient in time.**
-> HemoArrive finds blood across nearby hospitals and blood banks, splits a request across several
-> of them when one isn't enough, tracks every unit to the bedside, and turns every request into
-> data that helps plan the region's blood supply.
+A blood logistics tool that helps hospitals find blood in nearby hospitals and blood banks, get it reserved, and track it until it reaches the patient. This repo has the MVP, a browser-only simulation of a hospital network in Jaipur, along with the design and research docs behind it.
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
-![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?logo=leaflet&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-37%20passing-brightgreen)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+## The Problem
 
----
+Sometimes a hospital needs blood right away but doesn't have the blood group the patient needs. So someone at the blood bank starts calling around. One bank doesn't pick up, another has already promised its units to someone else, and a third has the blood but the bag will expire before the van gets there.
 
-## Table of contents
+Most of the time the blood is there, just a few kilometres away. What's missing is a way to find it, reserve it and move it in time. Current portals tell you how many units a bank has. They don't tell you which unit can reach your patient before it expires without being promised to someone else.
 
-- [The problem](#the-problem)
-- [What HemoArrive does](#what-hemoarrive-does)
-- [Quick start](#quick-start)
-- [App tour](#app-tour)
-- [Core rules](#core-rules)
-- [Project structure](#project-structure)
-- [Tech stack](#tech-stack)
-- [Documentation](#documentation)
-- [Roadmap](#roadmap)
-- [Disclaimer](#disclaimer)
-- [License](#license)
+## What We're Building
 
----
+HemoArrive lets you:
 
-## The problem
+- Raise a blood request for one or more patients
+- Alert nearby hospitals in widening circles (10 km, then 25 km, then 50 km)
+- Only see units that will still have enough shelf life when they arrive
+- Split one request across several hospitals when one isn't enough
+- Edit the suggested supply plan before approving it
+- Track every vehicle on a map with its ETA
+- Re-route automatically when a vehicle breaks down or gets stuck in traffic
+- Rate each hospital on how reliably it responds and delivers
+- See where blood is being asked for, and for which conditions, to help plan supply
+- Download a PDF delivery record for each hospital
 
-Sometimes hospital needs blood now but they don't have stock of that specific Blood Group needed. Its own fridge is short, so the blood bank officer starts phoning around:
-one bank doesn't answer, another already promised its units to someone else, a third has the blood
-but the bag expires before the van can get there.
+## Request Flow
 
-Often the blood **does exist** in hospitals a few kilometres away. What's missing is a way to
-**find it, reserve it, and move it in time**. Existing portals show *how many* units a bank has.
-They don't show *which unit can reach your patient before it expires, without being promised to
-someone else*.
-
-## What HemoArrive does
-
-| | Feature | Why it matters |
-| --- | --- | --- |
-| 🔎 | **Life-at-arrival matching** | A unit is offered only if it still has enough shelf life when it *arrives*, not just when it's found. |
-| 🧩 | **Split supply** | One request can be filled from several hospitals. The receiver can edit the suggested plan. |
-| 🏁 | **Competing-demand handling** | If another hospital takes the stock first, that share fails cleanly and the next-best bank is suggested. |
-| 🚑 | **Live multi-vehicle tracking** | Every vehicle is shown on the map with its ETA and a status timeline. |
-| 🔀 | **Half-way re-route rule** | On a breakdown or delay, the system decides whether to send fresh units or keep the ones already on the road, and explains why. |
-| 📊 | **Hospital Performance Score** | A 0–100 credit score (Gold / Silver / Watch / Review) based on how reliably each hospital responds and delivers. |
-| 🗺️ | **Planning data** | Aggregated demand by area and condition (ICD-10), early warnings, and suggestions for storage centres and donation camps. |
-| 📄 | **Delivery records** | A delivery report per hospital, downloadable as a PDF. |
-
-### The flow
-
-```
- Ask ──► Alert (10 → 25 → 50 km) ──► 2.5-min matching window ──► Suggested supply plan
-                                                                          │
- Report ◄── Confirm received ◄── Live tracking / re-route ◄── Dispatch ◄── Approve / decline
+```text
+Ask
+  ↓
+Alert nearby hospitals (10 → 25 → 50 km)
+  ↓
+2.5 minute matching window
+  ↓
+Suggested supply plan
+  ↓
+Sender approves or declines
+  ↓
+Dispatch
+  ↓
+Live tracking / re-route
+  ↓
+Receiver confirms
+  ↓
+Delivery report
 ```
 
-## Quick start
+## 🛠️ Tech Stack
 
-The MVP is a **simulation build**. It runs entirely in the browser on a simulated Jaipur network
-(30 fictional hospitals, synthetic stock), so you don't need a backend.
+What the MVP uses:
 
-**Requirements:** Node.js 18+ and npm.
+- React 18
+- TypeScript
+- Vite
+- Leaflet (OpenStreetMap / MapTiler tiles)
+- jsPDF
+- Vitest
 
-```bash
-git clone https://github.com/vishnudevs1/HemoArrive.git
-cd HemoArrive/mvp
-npm install
-npm run dev        # → http://localhost:5173
-```
+The production plan is Next.js, Supabase (Postgres + PostGIS, Auth, Realtime), Redis with BullMQ for timed jobs, and OpenRouteService for real road ETAs. The architecture doc goes into the details.
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm test` | Run the unit tests (compatibility, scoring, re-route rule, full loop, twin simulation) |
-| `npm run typecheck` | Type-check with `tsc` |
-| `npm run build` | Type-check and build a production bundle into `dist/` |
-| `npm run preview` | Serve the production build locally |
-
-### Map tiles (optional)
-
-If you don't set a key, the map uses openstreetmap.org tiles, which is fine for a local demo. For
-anything beyond that, get a free [MapTiler](https://www.maptiler.com/) key:
-
-```bash
-cp .env.example .env.local
-# then edit .env.local:
-VITE_MAPTILER_KEY=your_maptiler_key_here
-```
-
-`.env.local` is git-ignored, so the key is never committed.
-
-## App tour
-
-| Tab | What it shows |
-| --- | --- |
-| **Live request** | The full 9-step flow for one or more patients. Includes competing-demand simulation (Off / Normal / Busy), breakdown and heavy-traffic buttons that trigger the re-route rule, and six one-click auto demos. |
-| **Hospitals & stock** | Network dashboard (units by blood group, units expiring within 72 h), stock lots for each hospital, and an admin "Verify licence" action. |
-| **Performance** | Hospital Performance Score over the last 90 days: leaderboard, bands, per-metric scorecard, red flags, and "Appeal" on any event. |
-| **Planning** | Where blood is needed, for which conditions, and where requests go unmet: map, zone table, weekly trend, early warnings, suggestions, and a CSV area report. Counts under 5 show as "<5". |
-| **Smart vs Nearest** | A twin simulation that plays the same seeded 3-day event stream through a nearest-available planner and through HemoArrive, over 1, 10 or 30 seeds, with 95% intervals. |
-
-Use the speed controls (⏸ 1× 10× 30× 60×) to control simulated time.
-
-## Core rules
-
-- **Matching score** (lower is better; the top 5 are shown):
-
-  ```
-  score = 0.6 · ETA/ETAmax + 0.2 · (1 − offered/needed) + 0.1 · expiryRank + 0.1 · performanceBand
-  ```
-
-  Exact blood group by default. Compatible substitutes are listed separately and are never applied
-  automatically; they need a doctor's confirmation.
-- **Arrival margin:** a lot is offered only if it will still have **≥ 24 h** of life left on arrival
-  (red cells, plasma, whole blood), or **≥ 6 h** for platelets.
-- **Re-route rule:** triggered by a breakdown or an ETA slip of more than 10 min.
-  - Less than 50% of the trip travelled → **Case 1**: send fresh units from near the receiver.
-  - 50% or more travelled → **Case 2**: keep the units on the road (hand-off or continue).
-  - If the other option is at least 3 min faster, it wins. Every decision is explained on screen and logged.
-- **Sender timeout:** 5 min. A decline returns the receiver to the option list.
-- **Privacy:** no patient data is stored. The reason for a request is recorded as a category only.
-
-## Project structure
+## 📁 Project Structure
 
 ```
 HemoArrive/
-├── README.md                     ← you are here
-├── HemoArrive — *.md             ← design, research and pitch documents (see below)
-└── mvp/                          ← the runnable app
-    ├── index.html
-    ├── package.json
-    ├── .env.example
-    └── src/
-        ├── main.tsx, App.tsx, styles.css
-        ├── core/                 pure TypeScript, no UI; can move into a backend worker unchanged
-        │   ├── blood.ts            blood groups, components, shelf life, compatibility table
-        │   ├── city.ts             30 fictional Jaipur organisations, drivers, seeded inventory
-        │   ├── matching.ts         finding suppliers, offers, scoring, nearest-available baseline
-        │   ├── reroute.ts          Case 1 / Case 2 decision
-        │   ├── engine.ts           simulated clock + jobs (broadcast, window close, timeouts, ETA watch, re-route)
-        │   ├── twin.ts             Smart vs Nearest twin simulation
-        │   ├── conditions.ts       request conditions mapped to ICD-10 blocks
-        │   ├── history.ts          90 days of seeded network history
-        │   ├── performance.ts      Hospital Performance Score
-        │   ├── planning.ts         area aggregation, early warnings, suggestions, CSV report
-        │   ├── geo.ts, rng.ts, types.ts
-        │   └── core.test.ts        37 unit tests
-        └── ui/                   React screens (Leaflet map, PDF records)
+│
+├── mvp/
+│   ├── src/
+│   │   ├── core/
+│   │   │   ├── blood.ts
+│   │   │   ├── city.ts
+│   │   │   ├── matching.ts
+│   │   │   ├── reroute.ts
+│   │   │   ├── engine.ts
+│   │   │   ├── twin.ts
+│   │   │   ├── performance.ts
+│   │   │   ├── planning.ts
+│   │   │   ├── core.test.ts
+│   │   │   └── ...
+│   │   ├── ui/
+│   │   │   ├── LiveRequest.tsx
+│   │   │   ├── MapView.tsx
+│   │   │   ├── Network.tsx
+│   │   │   ├── Performance.tsx
+│   │   │   ├── Planning.tsx
+│   │   │   ├── Compare.tsx
+│   │   │   └── ...
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── .env.example
+│   ├── package.json
+│   └── ...
+│
+├── HemoArrive — *.md
+├── LICENSE
+└── README.md
 ```
 
-## Tech stack
+All the logic lives in `src/core`. It's plain TypeScript with no UI code, so it can be moved into a backend worker later without changes. `src/ui` holds the React screens.
 
-**This MVP:** React 18, TypeScript, Vite, Leaflet (OpenStreetMap / MapTiler tiles), jsPDF, Vitest.
+## ⚙️ Getting Started
 
-**Target production architecture** (see the architecture doc):
+There's no backend in this build. Everything runs in the browser on fictional hospitals and made-up stock. You'll need Node.js 18 or newer.
 
-| Layer | Choice |
-| --- | --- |
-| Web app + driver PWA | Next.js + TypeScript + Tailwind |
-| Database | Supabase Postgres + PostGIS |
-| Auth & access | Supabase Auth + Row Level Security |
-| Realtime | Supabase Realtime |
-| Fast state & jobs | Upstash Redis + BullMQ worker |
-| Routing & ETA | OpenRouteService / OSRM |
-| Maps | MapLibre GL + OpenStreetMap |
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/vishnudevs1/HemoArrive.git
+cd HemoArrive
+```
+
+### 2. Install dependencies
+
+```bash
+cd mvp
+npm install
+```
+
+### 3. Start the app
+
+```bash
+npm run dev
+```
+
+The app will run on:
+
+```
+http://localhost:5173
+```
+
+### 4. Map key (optional)
+
+The map works out of the box with openstreetmap.org tiles, which is fine for trying it locally. If you want to use MapTiler instead, get a free key and add it:
+
+```bash
+cp .env.example .env.local
+```
+
+Then inside `.env.local`:
+
+```
+VITE_MAPTILER_KEY=your_maptiler_key_here
+```
+
+`.env.local` is git-ignored so the key won't get committed.
+
+## 🧪 Running the Tests
+
+Inside the `mvp` directory:
+
+```bash
+npm test
+```
+
+This runs 37 unit tests covering blood compatibility, scoring, the re-route rule, the full request loop and the twin simulation.
+
+Other useful commands:
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+## 🔗 Trying It Out
+
+The app has five tabs:
+
+**Live request** runs the whole flow from request to delivery. You can turn on competing demand from other hospitals (Off / Normal / Busy), trigger a breakdown or heavy traffic to see the re-route rule kick in, or just run one of the six auto demos.
+
+**Hospitals & stock** shows stock across the network by blood group, units expiring in the next 72 hours, and the lots held by each hospital.
+
+**Performance** shows each hospital's score over the last 90 days, with a leaderboard, red flags and an option to appeal an event.
+
+**Planning** shows where blood is needed, for which conditions, and where requests go unmet. Counts under 5 are shown as "<5". You can export the area report as a CSV.
+
+**Smart vs Nearest** plays the same 3-day stream of requests through a "nearest available" approach and through HemoArrive, so you can compare the two.
+
+Use the speed buttons (1×, 10×, 30×, 60×) to speed up simulated time.
+
+## How Matching Works
+
+Each offer gets a score, lower is better, and the top 5 are shown:
+
+```
+score = 0.6 · ETA/ETAmax + 0.2 · (1 − offered/needed) + 0.1 · expiryRank + 0.1 · performanceBand
+```
+
+A few rules sit on top of that:
+
+- Exact blood group by default. Compatible substitutes are listed separately and need a doctor's confirmation
+- A unit is only offered if it will have at least 24 hours of life left on arrival (6 hours for platelets)
+- If the sender doesn't respond in 5 minutes, the receiver goes back to the option list
+- No patient data is stored. The reason for a request is saved as a category only
+
+## Re-routing
+
+When a vehicle breaks down, or its ETA slips by more than 10 minutes:
+
+1. If it has covered less than half the trip, fresh units are sent from near the receiver
+2. If it has covered half or more, the units already on the road keep going
+3. If the other option is at least 3 minutes faster, that one is picked instead
+4. The reason for the decision is shown on screen and logged
+
+## Concepts Covered
+
+- Matching supply to demand across many suppliers
+- Shelf life and expiry-aware planning
+- Handling races when two hospitals want the same stock
+- Event-driven simulation with a simulated clock
+- Live tracking on a map
+- Scoring and ranking hospitals
+- Aggregating data without exposing patients
+- Pure logic separated from the UI
 
 ## Documentation
 
-| Document | What's inside |
-| --- | --- |
-| [Pitch](HemoArrive%20%E2%80%94%20Pitch.md) | The problem with sources, the solution, what's novel, and the demo script |
-| [MVP Architecture](HemoArrive%20%E2%80%94%20MVP%20Architecture.md) | System design, request lifecycle, data model, matching and re-routing |
-| [Tech Stack Documentation](HemoArrive%20%E2%80%94%20Tech%20Stack%20Documentation.md) | Each technology choice and the reason for it |
-| [User Flow Documentation](HemoArrive%20%E2%80%94%20User%20Flow%20Documentation.md) | Roles, onboarding, and the receiver, sender and driver flows |
-| [Mentor Feedback Research & Proposal](HemoArrive%20%E2%80%94%20Mentor%20Feedback%20Research%20%26%20Proposal.md) | How each piece of mentor feedback was researched and addressed |
-| [BloodStock: MVP Research & Blueprint](BloodStock%20%E2%80%94%20MVP%20Research%20%26%20Blueprint%20%281%29.md) | Early research and blueprint (the project's earlier name) |
-| [MVP README](mvp/README.md) | App-level notes for developers |
+- [Pitch](HemoArrive%20%E2%80%94%20Pitch.md)
+- [MVP Architecture](HemoArrive%20%E2%80%94%20MVP%20Architecture.md)
+- [Tech Stack Documentation](HemoArrive%20%E2%80%94%20Tech%20Stack%20Documentation.md)
+- [User Flow Documentation](HemoArrive%20%E2%80%94%20User%20Flow%20Documentation.md)
+- [Mentor Feedback Research & Proposal](HemoArrive%20%E2%80%94%20Mentor%20Feedback%20Research%20%26%20Proposal.md)
+- [BloodStock: MVP Research & Blueprint](BloodStock%20%E2%80%94%20MVP%20Research%20%26%20Blueprint%20%281%29.md) (the project's earlier name)
 
-## Roadmap
+## What's Next
 
-Not in this build yet. These are the next steps toward the full architecture:
+- Supabase backend
+- Redis/BullMQ worker for timed jobs
+- Real road routing and ETAs
+- Push, SMS and email notifications
+- Driver app with real GPS
+- Separate logins for each hospital
 
-- [ ] Supabase backend (Postgres + PostGIS, Auth/RLS, Realtime, Storage)
-- [ ] Redis/BullMQ worker for timed jobs
-- [ ] Real road routing and ETAs (OpenRouteService)
-- [ ] Push, SMS and email notifications
-- [ ] Driver PWA with real GPS
-- [ ] Multi-user logins per hospital
+## Note
 
-## Disclaimer
-
-HemoArrive is a **prototype**. All hospitals, drivers, stock and history in the app are **fictional
-and simulated**. It is not a medical device and must not be used for real clinical or transfusion
-decisions.
+This is a prototype. Every hospital, driver, stock entry and history record in the app is made up. It isn't a medical device and shouldn't be used for real clinical or transfusion decisions.
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2026 Vishnu Kumar
-
----
-
-<p align="center">Made by <a href="https://github.com/vishnudevs1">Vishnu Kumar</a></p>
+[MIT](LICENSE)
